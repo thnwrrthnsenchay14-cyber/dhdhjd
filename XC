@@ -1,0 +1,282 @@
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Settings
+local Aiming = false
+local TargetPart = "Head" -- "Head" หรือ "HumanoidRootPart"
+local FOVRadius = 100
+local ShowFOV = true
+
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ToggleBtn = Instance.new("TextButton")
+local PartBtn = Instance.new("TextButton")
+local FOVUpBtn = Instance.new("TextButton")
+local FOVDownBtn = Instance.new("TextButton")
+local FOVLabel = Instance.new("TextLabel")
+
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Frame Settings
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
+Frame.Size = UDim2.new(0, 200, 0, 220)
+Frame.Active = true
+Frame.Draggable = true -- ลากย้ายหน้าต่างได้
+
+-- Title
+Title.Parent = Frame
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Title.BorderSizePixel = 0
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Aimbot Delta Hub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+
+-- Toggle Button (เปิด/ปิด)
+ToggleBtn.Parent = Frame
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.18, 0)
+ToggleBtn.Size = UDim2.new(0.9, 0, 0, 30)
+ToggleBtn.Font = Enum.Font.SourceSans
+ToggleBtn.Text = "สถานะ: ปิดใช้งาน [OFF]"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 14
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    Aiming = not Aiming
+    if Aiming then
+        ToggleBtn.Text = "สถานะ: เปิดใช้งาน [ON]"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+    else
+        ToggleBtn.Text = "สถานะ: ปิดใช้งาน [OFF]"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    end
+end)
+
+-- Target Part Button (หัว / ลำตัว)
+PartBtn.Parent = Frame
+PartBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+PartBtn.Position = UDim2.new(0.05, 0, 0.36, 0)
+PartBtn.Size = UDim2.new(0.9, 0, 0, 30)
+PartBtn.Font = Enum.Font.SourceSans
+PartBtn.Text = "ตำแหน่งล็อก: หัว (Head)"
+PartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PartBtn.TextSize = 14
+
+PartBtn.MouseButton1Click:Connect(function()
+    if TargetPart == "Head" then
+        TargetPart = "HumanoidRootPart"
+        PartBtn.Text = "ตำแหน่งล็อก: ลำตัว (Body)"
+    else
+        TargetPart = "Head"
+        PartBtn.Text = "ตำแหน่งล็อก: หัว (Head)"
+    end
+end)
+
+-- FOV Label
+FOVLabel.Parent = Frame
+FOVLabel.BackgroundTransparency = 1
+FOVLabel.Position = UDim2.new(0.05, 0, 0.54, 0)
+FOVLabel.Size = UDim2.new(0.9, 0, 0, 20)
+FOVLabel.Font = Enum.Font.SourceSans
+FOVLabel.Text = "ระยะวงกลม (FOV): 100"
+FOVLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+FOVLabel.TextSize = 14
+
+-- FOV Control Buttons
+FOVDownBtn.Parent = Frame
+FOVDownBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+FOVDownBtn.Position = UDim2.new(0.05, 0, 0.68, 0)
+FOVDownBtn.Size = UDim2.new(0.42, 0, 0, 30)
+FOVDownBtn.Font = Enum.Font.SourceSansBold
+FOVDownBtn.Text = "- ลด FOV"
+FOVDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FOVDownBtn.TextSize = 14
+
+FOVUpBtn.Parent = Frame
+FOVUpBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+FOVUpBtn.Position = UDim2.new(0.53, 0, 0.68, 0)
+FOVUpBtn.Size = UDim2.new(0.42, 0, 0, 30)
+FOVUpBtn.Font = Enum.Font.SourceSansBold
+FOVUpBtn.Text = "+ เพิ่ม FOV"
+FOVUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FOVUpBtn.TextSize = 14
+
+-- FOV Circle
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1.5
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Filled = false
+FOVCircle.Transparency = 0.8
+FOVCircle.NumSides = 30
+FOVCircle.Visible = true
+
+FOVDownBtn.MouseButton1Click:Connect(function()
+    if FOVRadius > 20 then
+        FOVRadius = FOVRadius - 20
+        FOVLabel.Text = "ระยะวงกลม (FOV): " .. tostring(FOVRadius)
+    end
+end)
+
+FOVUpBtn.MouseButton1Click:Connect(function()
+    if FOVRadius < 500 then
+        FOVRadius = FOVRadius + 20
+        FOVLabel.Text = "ระยะวงกลม (FOV): " .. tostring(FOVRadius)
+    end
+end)
+
+-- Find Closest Player
+local function GetClosestPlayer()
+    local ClosestPlayer = nil
+    local ShortestDistance = FOVRadius
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(TargetPart) and v.Character:FindFirstChildOfClass("Humanoid") then
+            if v.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                local PartPos, OnScreen = Camera:WorldToViewportPoint(v.Character[TargetPart].Position)
+                if OnScreen then
+                    local MousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                    local Distance = (Vector2.new(PartPos.X, PartPos.Y) - MousePos).Magnitude
+
+                    if Distance < Shortestสคริปต์ AIM (ล็อกเป้า/ล็อกหัว) เบื้องต้นที่สร้างหน้าต่าง GUI ขึ้นมาปรับตั้งค่าและเปิด-ปิดการทำงานได้ครับ 
+
+ตัวสคริปต์จะหาผู้เล่นฝั่งตรงข้ามที่อยู่ใกล้เป้าเล็ง (Crosshair) หรือหน้าจอมากที่สุด แล้วล็อกมุมกล้องไปที่ตำแหน่งหัวของเป้าหมายขณะกดปุ่มเล็ง (คลิกขวา)
+
+---
+
+### สคริปต์ Aim Lock + GUI Window
+
+```lua
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
+
+-- Settings Variable
+local AimEnabled = false
+local AimPart = "Head" -- "Head" หรือ "HumanoidRootPart"
+local AimKey = Enum.UserInputType.MouseButton2 -- ปุ่มขวาของเมาส์
+local Sensitivity = 0.2 -- ความสมูท (0.1 - 1.0)
+
+-- GUI Elements
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ToggleBtn = Instance.new("TextButton")
+local PartBtn = Instance.new("TextButton")
+
+-- Insert GUI
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Main Frame Setup
+MainFrame.Name = "AimLockMenu"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 140)
+MainFrame.Active = true
+MainFrame.Draggable = true -- ลากหน้าต่างไปมาได้
+
+-- Title
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Title.BorderSizePixel = 0
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Aim Lock Setting"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+
+-- Toggle Button (เปิด/ปิด)
+ToggleBtn.Parent = MainFrame
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
+ToggleBtn.Size = UDim2.new(0.8, 0, 0, 35)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Text = "Status: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 14
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    AimEnabled = not AimEnabled
+    if AimEnabled then
+        ToggleBtn.Text = "Status: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+    else
+        ToggleBtn.Text = "Status: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    end
+end)
+
+-- Target Part Button (สลับตำแหน่งล็อก Head / Body)
+PartBtn.Parent = MainFrame
+PartBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+PartBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
+PartBtn.Size = UDim2.new(0.8, 0, 0, 35)
+PartBtn.Font = Enum.Font.SourceSans
+PartBtn.Text = "Target: Head"
+PartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PartBtn.TextSize = 14
+
+PartBtn.MouseButton1Click:Connect(function()
+    if AimPart == "Head" then
+        AimPart = "HumanoidRootPart"
+        PartBtn.Text = "Target: Torso / Body"
+    else
+        AimPart = "Head"
+        PartBtn.Text = "Target: Head"
+    end
+end)
+
+-- Function: หาผู้เล่นที่ใกล้จุดศูนย์กลางหน้าจอที่สุด
+local function GetClosestPlayer()
+    local ClosestPlayer = nil
+    local ShortestDistance = math.huge
+    local MousePos = UserInputService:GetMouseLocation()
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(AimPart) and v.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+            local TargetPart = v.Character[AimPart]
+            local ScreenPos, OnScreen = Camera:WorldToViewportPoint(TargetPart.Position)
+
+            if OnScreen then
+                local Distance = (Vector2.new(ScreenPos.X, ScreenPos.Y) - MousePos).Magnitude
+                if Distance < ShortestDistance then
+                    ShortestDistance = Distance
+                    ClosestPlayer = TargetPart
+                end
+            end
+        end
+    end
+    return ClosestPlayer
+end
+
+-- Main Loop: หันกล้องไปหาเป้าหมายเมื่อกดคลิกขวา
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == AimKey and AimEnabled then
+        local Target = GetClosestPlayer()
+        while UserInputService:IsMouseButtonPressed(AimKey) and AimEnabled do
+            task.wait()
+            if Target and Target.Parent and Target.Parent:FindFirstChildOfClass("Humanoid").Health > 0 then
+                -- ค่อยๆ หันกล้องไปหาเป้าหมาย (Smoothing)
+                Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, Target.Position), Sensitivity)
+            else
+                Target = GetClosestPlayer() -- หากเป้าหมายตายให้หาใหม่
+            end
+        end
+    end
+end)
